@@ -337,13 +337,11 @@ def submit_replicate_prediction(model, input_data):
         "Content-Type": "application/json",
     }
 
-    payload = {
-        "model": model,
-        "input": input_data,
-    }
+    payload = {"input": input_data}
 
+    # Use the model-specific predictions endpoint (owner/name format)
     response = requests.post(
-        "https://api.replicate.com/v1/predictions",
+        f"https://api.replicate.com/v1/models/{model}/predictions",
         headers=headers, json=payload
     )
 
