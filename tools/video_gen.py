@@ -22,6 +22,8 @@ def _resolve_model(record_model_field, default_model=None):
         "Sora 2": "sora-2",
         "Sora 2 Pro": "sora-2-pro",
         "Veo 3.1": "veo-3.1",
+        "Minimax Video": "minimax-video",
+        "LTX Video": "ltx-video",
     }
     default = default_model or config.DEFAULT_VIDEO_MODEL
     return mapping.get(record_model_field, default)

@@ -23,6 +23,8 @@ _MODEL_DISPLAY_NAMES = {
     "nano-banana": "Nano Banana",
     "nano-banana-pro": "Nano Banana Pro",
     "gpt-image-1.5": "GPT Image 1.5",
+    "flux-schnell": "FLUX.1 Schnell",
+    "flux-dev": "FLUX.1 Dev",
 }
 
 # Reverse mapping: Airtable display name -> internal model name

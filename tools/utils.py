@@ -321,6 +321,118 @@ def poll_wavespeed_tasks_parallel(tasks, max_wait=600, poll_interval=10):
     return results
 
 
+def submit_replicate_prediction(model, input_data):
+    """
+    Submit a prediction to Replicate API and return the prediction info.
+
+    Args:
+        model: Replicate model identifier (e.g., "black-forest-labs/flux-schnell")
+        input_data: Dict of model input parameters
+
+    Returns:
+        dict: {"prediction_id": str, "poll_url": str}
+    """
+    headers = {
+        "Authorization": f"Bearer {config.REPLICATE_API_TOKEN}",
+        "Content-Type": "application/json",
+    }
+
+    payload = {
+        "model": model,
+        "input": input_data,
+    }
+
+    response = requests.post(
+        "https://api.replicate.com/v1/predictions",
+        headers=headers, json=payload
+    )
+
+    if response.status_code not in (200, 201):
+        raise Exception(f"Replicate API error: {response.status_code} - {response.text}")
+
+    result = response.json()
+    prediction_id = result.get("id")
+    poll_url = result.get("urls", {}).get("get",
+                f"https://api.replicate.com/v1/predictions/{prediction_id}")
+
+    if not prediction_id:
+        raise Exception(f"No prediction ID in Replicate response: {result}")
+
+    return {"prediction_id": prediction_id, "poll_url": poll_url}
+
+
+def poll_replicate_prediction(prediction_id, max_wait=300, poll_interval=5, quiet=False):
+    """
+    Poll a Replicate prediction until completion.
+
+    Args:
+        prediction_id: The Replicate prediction ID
+        max_wait: Maximum seconds to wait
+        poll_interval: Seconds between status checks
+        quiet: If True, suppress per-poll status messages
+
+    Returns:
+        dict with 'status', 'task_id', and 'result_url'
+
+    Raises:
+        Exception on failure or timeout
+    """
+    headers = {"Authorization": f"Bearer {config.REPLICATE_API_TOKEN}"}
+    poll_url = f"https://api.replicate.com/v1/predictions/{prediction_id}"
+    start_time = time.time()
+    retry_count = 0
+
+    while time.time() - start_time < max_wait:
+        response = requests.get(poll_url, headers=headers)
+
+        if response.status_code != 200:
+            retry_count += 1
+            if retry_count > 10:
+                raise Exception(f"Replicate status check failed after retries: {response.text}")
+            elapsed = int(time.time() - start_time)
+            if not quiet:
+                print_status(f"Status check returned {response.status_code}, retrying... ({elapsed}s)", "!!")
+            time.sleep(poll_interval)
+            continue
+
+        data = response.json()
+        status = data.get("status", "unknown")
+        retry_count = 0
+
+        if status == "succeeded":
+            output = data.get("output")
+            # Output can be a list (images) or a single URL (videos)
+            if isinstance(output, list):
+                result_url = output[0] if output else None
+            else:
+                result_url = output
+
+            if not result_url:
+                raise Exception(f"No output URL in completed Replicate prediction: {data}")
+
+            if not quiet:
+                print_status("Replicate prediction completed!", "OK")
+            return {
+                "status": "success",
+                "task_id": prediction_id,
+                "result_url": result_url,
+            }
+
+        elif status in ("failed", "canceled"):
+            error = data.get("error", "Unknown error")
+            raise Exception(f"Replicate prediction {status}: {error}")
+
+        else:
+            # starting, processing
+            elapsed = int(time.time() - start_time)
+            mins, secs = divmod(elapsed, 60)
+            if not quiet:
+                print_status(f"Replicate status: {status} ({mins}m {secs}s elapsed)", "..")
+            time.sleep(poll_interval)
+
+    raise Exception(f"Timeout waiting for Replicate prediction after {max_wait}s")
+
+
 def download_file(url, output_path):
     """
     Download a file from URL to local path.

@@ -22,6 +22,9 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 WAVESPEED_API_KEY = os.getenv("WAVESPEED_API_KEY")
 WAVESPEED_API_URL = "https://api.wavespeed.ai/api/v3"
 
+# --- Replicate ---
+REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN")
+
 # --- Kie AI Endpoints ---
 KIE_FILE_UPLOAD_URL = "https://kieai.redpandaai.co/api/file-stream-upload"
 KIE_CREATE_URL = "https://api.kie.ai/api/v1/jobs/createTask"
@@ -51,6 +54,11 @@ COSTS = {
     ("kling-3.0", "wavespeed"): 0.30,
     ("sora-2", "wavespeed"): 0.30,
     ("sora-2-pro", "wavespeed"): 0.30,
+    # Replicate models (budget tier)
+    ("flux-schnell", "replicate"): 0.003,
+    ("flux-dev", "replicate"): 0.01,
+    ("minimax-video", "replicate"): 0.10,
+    ("ltx-video", "replicate"): 0.04,
 }
 
 # --- Default Models ---
@@ -113,8 +121,8 @@ def check_credentials():
     missing = [name for name, value in required.items() if not value]
 
     # At least one generation provider must be configured
-    if not KIE_API_KEY and not GOOGLE_API_KEY:
-        missing.append("KIE_API_KEY or GOOGLE_API_KEY (at least one required)")
+    if not KIE_API_KEY and not GOOGLE_API_KEY and not REPLICATE_API_TOKEN:
+        missing.append("KIE_API_KEY or GOOGLE_API_KEY or REPLICATE_API_TOKEN (at least one required)")
 
     if missing:
         print("Missing API keys:")

@@ -13,7 +13,7 @@ Usage:
     provider, name = get_video_provider("kling-3.0")                # WaveSpeed (default)
 """
 
-from . import kie, google, wavespeed
+from . import kie, google, wavespeed, replicate
 
 # --- Image model registry ---
 IMAGE_PROVIDERS = {
@@ -28,6 +28,14 @@ IMAGE_PROVIDERS = {
     "gpt-image-1.5": {
         "default": "wavespeed",
         "providers": {"wavespeed": wavespeed},
+    },
+    "flux-schnell": {
+        "default": "replicate",
+        "providers": {"replicate": replicate},
+    },
+    "flux-dev": {
+        "default": "replicate",
+        "providers": {"replicate": replicate},
     },
 }
 
@@ -48,6 +56,14 @@ VIDEO_PROVIDERS = {
     "veo-3.1": {
         "default": "google",
         "providers": {"google": google},
+    },
+    "minimax-video": {
+        "default": "replicate",
+        "providers": {"replicate": replicate},
+    },
+    "ltx-video": {
+        "default": "replicate",
+        "providers": {"replicate": replicate},
     },
 }
 

@@ -86,8 +86,8 @@ Founded by Bobbi Brown. Clean beauty brand built on anti-perfection, pro-real-wo
 - Nightlife, party, or event settings
 
 ## Tech Stack
-- **Image Generation**: Nano Banana / Nano Banana Pro via Google AI Studio (default) or Kie AI (`tools/image_gen.py`)
-- **Video Generation**: Veo 3.1 via Google AI Studio (default), Kling 3.0 / Sora 2 Pro via Kie AI or WaveSpeed AI (`tools/video_gen.py`)
+- **Image Generation**: Nano Banana / Nano Banana Pro via Google AI Studio (default), Kie AI (fallback), FLUX.1 Schnell / Dev via Replicate (budget) (`tools/image_gen.py`)
+- **Video Generation**: Veo 3.1 via Google AI Studio (default), Kling 3.0 / Sora 2 Pro via Kie AI or WaveSpeed AI, Minimax Video / LTX Video via Replicate (budget) (`tools/video_gen.py`)
 - **Video Analysis**: Gemini 2.0 Flash via Google AI Studio Files API (`tools/video_analyze.py`)
 - **Asset Hub**: Airtable REST API (`tools/airtable.py`)
 - **Reference Upload**: Kie.ai file hosting (`tools/kie_upload.py`)
@@ -105,6 +105,7 @@ If the user hasn't set up yet, walk them through:
    - `GOOGLE_API_KEY` - from https://aistudio.google.com/apikey (default provider for images + Veo 3.1)
    - `KIE_API_KEY` - from https://kie.ai/api-key (for Kling/Sora videos + fallback image gen + file hosting)
    - `WAVESPEED_API_KEY` (optional) - from https://wavespeed.ai (backup video provider for Kling/Sora)
+   - `REPLICATE_API_TOKEN` (optional) - from https://replicate.com/account/api-tokens (budget tier — FLUX images, Minimax/LTX videos)
    - `AIRTABLE_API_KEY` - Airtable PAT with scopes: `data.records:read`, `data.records:write`, `schema.bases:read`, `schema.bases:write`
    - `AIRTABLE_BASE_ID` - from the Airtable base URL (`appXXXXXX`)
 3. Create the Airtable table:
@@ -116,21 +117,31 @@ If the user hasn't set up yet, walk them through:
 
 The generator supports multiple API providers. Each model maps to a default provider, but can be overridden.
 
-| Model | Default Provider | Also Available | Use Case |
-|-------|-----------------|----------------|----------|
-| Nano Banana | Google AI Studio | Kie AI | Fast image generation |
-| Nano Banana Pro | Google AI Studio | Kie AI | High-quality image generation |
-| Veo 3.1 | Google AI Studio | — | Authentic video (native audio/dialogue) |
-| Kling 3.0 | Kie AI | WaveSpeed AI | Cinematic video |
-| Sora 2 Pro | Kie AI | WaveSpeed AI | High-quality video |
+| Model | Default Provider | Also Available | Cost | Use Case |
+|-------|-----------------|----------------|------|----------|
+| Nano Banana | Google AI Studio | Kie AI | $0.04 | Fast image generation |
+| Nano Banana Pro | Google AI Studio | Kie AI | $0.13 | High-quality image generation |
+| FLUX.1 Schnell | Replicate | — | $0.003 | Budget bulk image generation |
+| FLUX.1 Dev | Replicate | — | $0.01 | Budget quality image generation |
+| Veo 3.1 | Google AI Studio | — | $0.50 | Authentic video (native audio/dialogue) |
+| Kling 3.0 | WaveSpeed AI | Kie AI | $0.30 | Cinematic video |
+| Sora 2 Pro | WaveSpeed AI | Kie AI | $0.30 | High-quality video |
+| Minimax Video | Replicate | — | $0.10 | Budget video generation |
+| LTX Video | Replicate | — | $0.04 | Ultra-budget video generation |
 
-To override the provider, pass `provider="kie"`, `provider="google"`, or `provider="wavespeed"` to generation functions:
+To override the provider, pass `provider="kie"`, `provider="google"`, `provider="wavespeed"`, or `provider="replicate"` to generation functions:
 ```python
 # Use Kie AI instead of Google for images:
 generate_batch(records, reference_paths=[...], provider="kie")
 # Use WaveSpeed instead of Kie AI for Kling/Sora videos:
 generate_batch(records, provider="wavespeed")
+# Use FLUX.1 Schnell for budget images (set Image Model in Airtable to "FLUX.1 Schnell"):
+generate_batch(records, model="flux-schnell")
+# Use Minimax Video for budget videos (set Video Model in Airtable to "Minimax Video"):
+generate_batch(records, model="minimax-video")
 ```
+
+**Note:** FLUX models do NOT support native reference images. Best for bulk iteration and UGC drafts, not hero product shots.
 
 ## Workflow 0: Analyze Reference Videos (Optional but Recommended)
 
@@ -359,11 +370,15 @@ Cost reference (per unit):
 | Nano Banana | Kie AI | $0.09 |
 | Nano Banana Pro | Google | ~$0.13 |
 | Nano Banana Pro | Kie AI | $0.09 |
+| FLUX.1 Schnell | Replicate | ~$0.003 |
+| FLUX.1 Dev | Replicate | ~$0.01 |
 | Veo 3.1 | Google | ~$0.50 |
 | Kling 3.0 | Kie AI | ~$0.30 |
 | Kling 3.0 | WaveSpeed | ~$0.30 |
 | Sora 2 Pro | Kie AI | ~$0.30 |
 | Sora 2 Pro | WaveSpeed | ~$0.30 |
+| Minimax Video | Replicate | ~$0.10 |
+| LTX Video | Replicate | ~$0.04 |
 
 Do NOT batch confirmation — if doing images and videos separately, confirm each batch separately.
 
@@ -377,12 +392,12 @@ The `Content` table has these fields (in order):
 | 3 | Product | Text | Product name |
 | 4 | Reference Images | Attachment | Product photos (attached at record creation for visual confirmation) |
 | 5 | Image Prompt | Long Text | Prompt for image generation |
-| 6 | Image Model | Select | Nano Banana / Nano Banana Pro / GPT Image 1.5 |
+| 6 | Image Model | Select | Nano Banana / Nano Banana Pro / GPT Image 1.5 / FLUX.1 Schnell / FLUX.1 Dev |
 | 7 | Image Status | Select | Pending / Generated / Approved / Rejected |
 | 8 | Generated Image 1 | Attachment | AI-generated scene (variation 1) |
 | 9 | Generated Image 2 | Attachment | AI-generated scene (variation 2) |
 | 10 | Video Prompt | Long Text | Motion prompt for video generation |
-| 11 | Video Model | Select | Kling 3.0 / Sora 2 Pro / Veo 3.1 |
+| 11 | Video Model | Select | Kling 3.0 / Sora 2 Pro / Veo 3.1 / Minimax Video / LTX Video |
 | 12 | Video Status | Select | Pending / Generated / Approved / Rejected |
 | 13 | Generated Video 1 | Attachment | Final video file (variation 1) |
 | 14 | Generated Video 2 | Attachment | Final video file (variation 2) |
@@ -414,6 +429,7 @@ tools/                - (T) Python package
     google.py         - Google AI Studio provider (Nano Banana, Veo 3.1)
     kie.py            - Kie AI provider (Nano Banana Pro, Kling, Sora)
     wavespeed.py      - WaveSpeed AI provider (Kling, Sora — backup)
+    replicate.py      - Replicate provider (FLUX images, Minimax/LTX videos — budget)
 CLAUDE.md             - Agent instructions (this file)
 ```
 
