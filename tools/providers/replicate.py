@@ -1,15 +1,21 @@
 """
-Replicate provider — budget image generation (FLUX.1 Schnell, FLUX.1 Dev)
-and video generation (Minimax Video-01, LTX Video) via Replicate's HTTP API.
+Replicate provider — image generation and video generation via Replicate's HTTP API.
+
+Image models (cheapest to most capable):
+- FLUX.1 Schnell ($0.003) — fast drafts, no reference image support
+- FLUX.1 Dev ($0.01) — better quality drafts, no reference image support
+- Ideogram 3.0 Turbo ($0.03) — best text rendering, style reference support (up to 3)
+- FLUX Kontext Pro (~$0.05) — reference image support, keeps product identity
+
+Video models:
+- LTX Video ($0.04) — ultra-budget, image-to-video
+- Minimax Video-01 ($0.10) — mid-tier, image-to-video
 
 All generation is ASYNCHRONOUS (submit prediction → poll for result).
 
 Replicate API: https://replicate.com/docs/reference/http
-- POST /v1/predictions → create prediction
+- POST /v1/models/{owner}/{name}/predictions → create prediction
 - GET  /v1/predictions/{id} → get prediction status + output
-
-Note: FLUX models do NOT support native reference images (no IP-Adapter).
-Best used for bulk iteration, UGC drafts, and budget campaigns.
 """
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -29,6 +35,8 @@ video_IS_SYNC = False
 _IMAGE_MODELS = {
     "flux-schnell": "black-forest-labs/flux-schnell",
     "flux-dev": "black-forest-labs/flux-dev",
+    "ideogram": "ideogram-ai/ideogram-v3-turbo",
+    "flux-kontext": "black-forest-labs/flux-kontext-pro",
 }
 
 # --- Replicate video model identifiers ---
@@ -55,17 +63,22 @@ _FLUX_SIZES = {
 # Image Generation
 # ---------------------------------------------------------------------------
 
-def submit_image(prompt, reference_urls=None, aspect_ratio="9:16",
-                 resolution="1K", model="flux-schnell", **kwargs):
+def submit_image(prompt, reference_urls=None, reference_paths=None,
+                 aspect_ratio="9:16", resolution="1K",
+                 model="flux-schnell", **kwargs):
     """
-    Submit an image generation prediction to Replicate (FLUX models).
+    Submit an image generation prediction to Replicate.
 
     Args:
         prompt: Image prompt text
-        reference_urls: Ignored — FLUX models don't support native reference images
+        reference_urls: Hosted reference image URLs
+            - Ignored by flux-schnell and flux-dev (no reference support)
+            - Used as style_reference_images by ideogram (up to 3)
+            - First URL used as image_url by flux-kontext
+        reference_paths: Ignored (Replicate needs URLs, not local paths)
         aspect_ratio: Aspect ratio string (e.g., "9:16")
-        resolution: Ignored for FLUX (fixed output resolution)
-        model: "flux-schnell" or "flux-dev"
+        resolution: Ignored for Replicate models
+        model: "flux-schnell", "flux-dev", "ideogram", or "flux-kontext"
 
     Returns:
         str: prediction_id for polling
@@ -75,22 +88,53 @@ def submit_image(prompt, reference_urls=None, aspect_ratio="9:16",
         raise ValueError(f"Replicate doesn't support image model: '{model}'. "
                          f"Available: {list(_IMAGE_MODELS.keys())}")
 
-    input_data = {
-        "prompt": prompt,
-        "num_outputs": 1,
-        "output_format": "png",
-    }
-
-    # FLUX supports aspect_ratio directly
-    if aspect_ratio:
-        input_data["aspect_ratio"] = aspect_ratio
-
-    # Model-specific parameters
+    # --- FLUX Schnell ---
     if model == "flux-schnell":
-        input_data["go_fast"] = True
+        input_data = {
+            "prompt": prompt,
+            "num_outputs": 1,
+            "output_format": "png",
+            "go_fast": True,
+        }
+        if aspect_ratio:
+            input_data["aspect_ratio"] = aspect_ratio
+
+    # --- FLUX Dev ---
     elif model == "flux-dev":
-        input_data["guidance"] = 3.5
-        input_data["num_inference_steps"] = 28
+        input_data = {
+            "prompt": prompt,
+            "num_outputs": 1,
+            "output_format": "png",
+            "guidance": 3.5,
+            "num_inference_steps": 28,
+        }
+        if aspect_ratio:
+            input_data["aspect_ratio"] = aspect_ratio
+
+    # --- Ideogram 3.0 Turbo ---
+    elif model == "ideogram":
+        input_data = {
+            "prompt": prompt,
+        }
+        if aspect_ratio:
+            input_data["aspect_ratio"] = aspect_ratio
+        # Ideogram supports up to 3 style reference images
+        if reference_urls:
+            input_data["style_reference_images"] = list(reference_urls[:3])
+
+    # --- FLUX Kontext Pro ---
+    elif model == "flux-kontext":
+        input_data = {
+            "prompt": prompt,
+        }
+        if aspect_ratio:
+            input_data["aspect_ratio"] = aspect_ratio
+        # Kontext takes a single reference image to preserve product identity
+        if reference_urls:
+            input_data["image_url"] = reference_urls[0]
+
+    else:
+        raise ValueError(f"No payload builder for model: {model}")
 
     result = submit_replicate_prediction(replicate_model, input_data)
     return result["prediction_id"]

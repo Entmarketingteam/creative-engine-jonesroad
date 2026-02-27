@@ -57,6 +57,8 @@ COSTS = {
     # Replicate models (budget tier)
     ("flux-schnell", "replicate"): 0.003,
     ("flux-dev", "replicate"): 0.01,
+    ("ideogram", "replicate"): 0.03,
+    ("flux-kontext", "replicate"): 0.05,
     ("minimax-video", "replicate"): 0.10,
     ("ltx-video", "replicate"): 0.04,
 }

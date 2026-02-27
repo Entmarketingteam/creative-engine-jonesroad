@@ -121,8 +121,10 @@ The generator supports multiple API providers. Each model maps to a default prov
 |-------|-----------------|----------------|------|----------|
 | Nano Banana | Google AI Studio | Kie AI | $0.04 | Fast image generation |
 | Nano Banana Pro | Google AI Studio | Kie AI | $0.13 | High-quality image generation |
-| FLUX.1 Schnell | Replicate | — | $0.003 | Budget bulk image generation |
-| FLUX.1 Dev | Replicate | — | $0.01 | Budget quality image generation |
+| FLUX.1 Schnell | Replicate | — | $0.003 | Budget bulk drafts (no ref image) |
+| FLUX.1 Dev | Replicate | — | $0.01 | Budget quality drafts (no ref image) |
+| Ideogram 3.0 | Replicate | — | $0.03 | Best text rendering, style refs (up to 3) |
+| FLUX Kontext Pro | Replicate | — | $0.05 | Mid-tier with reference image support |
 | Veo 3.1 | Google AI Studio | — | $0.50 | Authentic video (native audio/dialogue) |
 | Kling 3.0 | WaveSpeed AI | Kie AI | $0.30 | Cinematic video |
 | Sora 2 Pro | WaveSpeed AI | Kie AI | $0.30 | High-quality video |
@@ -141,7 +143,11 @@ generate_batch(records, model="flux-schnell")
 generate_batch(records, model="minimax-video")
 ```
 
-**Note:** FLUX models do NOT support native reference images. Best for bulk iteration and UGC drafts, not hero product shots.
+**Reference image support by model:**
+- **Nano Banana Pro / Nano Banana**: Native reference support (best product accuracy)
+- **FLUX Kontext Pro**: Single reference image (keeps product identity in new scenes)
+- **Ideogram 3.0**: Up to 3 style reference images (best text rendering)
+- **FLUX Schnell / Dev**: No reference support (drafts only)
 
 ## Workflow 0: Analyze Reference Videos (Optional but Recommended)
 
@@ -372,6 +378,8 @@ Cost reference (per unit):
 | Nano Banana Pro | Kie AI | $0.09 |
 | FLUX.1 Schnell | Replicate | ~$0.003 |
 | FLUX.1 Dev | Replicate | ~$0.01 |
+| Ideogram 3.0 | Replicate | ~$0.03 |
+| FLUX Kontext Pro | Replicate | ~$0.05 |
 | Veo 3.1 | Google | ~$0.50 |
 | Kling 3.0 | Kie AI | ~$0.30 |
 | Kling 3.0 | WaveSpeed | ~$0.30 |
@@ -392,7 +400,7 @@ The `Content` table has these fields (in order):
 | 3 | Product | Text | Product name |
 | 4 | Reference Images | Attachment | Product photos (attached at record creation for visual confirmation) |
 | 5 | Image Prompt | Long Text | Prompt for image generation |
-| 6 | Image Model | Select | Nano Banana / Nano Banana Pro / GPT Image 1.5 / FLUX.1 Schnell / FLUX.1 Dev |
+| 6 | Image Model | Select | Nano Banana / Nano Banana Pro / GPT Image 1.5 / FLUX.1 Schnell / FLUX.1 Dev / Ideogram 3.0 / FLUX Kontext Pro |
 | 7 | Image Status | Select | Pending / Generated / Approved / Rejected |
 | 8 | Generated Image 1 | Attachment | AI-generated scene (variation 1) |
 | 9 | Generated Image 2 | Attachment | AI-generated scene (variation 2) |

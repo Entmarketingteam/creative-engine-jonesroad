@@ -37,6 +37,14 @@ IMAGE_PROVIDERS = {
         "default": "replicate",
         "providers": {"replicate": replicate},
     },
+    "ideogram": {
+        "default": "replicate",
+        "providers": {"replicate": replicate},
+    },
+    "flux-kontext": {
+        "default": "replicate",
+        "providers": {"replicate": replicate},
+    },
 }
 
 # --- Video model registry ---

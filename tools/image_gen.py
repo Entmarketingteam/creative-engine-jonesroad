@@ -25,6 +25,8 @@ _MODEL_DISPLAY_NAMES = {
     "gpt-image-1.5": "GPT Image 1.5",
     "flux-schnell": "FLUX.1 Schnell",
     "flux-dev": "FLUX.1 Dev",
+    "ideogram": "Ideogram 3.0",
+    "flux-kontext": "FLUX Kontext Pro",
 }
 
 # Reverse mapping: Airtable display name -> internal model name
