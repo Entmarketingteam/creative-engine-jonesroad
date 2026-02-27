@@ -182,7 +182,7 @@ def create_record(fields):
     response = requests.post(
         _table_url(),
         headers=_headers(),
-        json={"fields": fields},
+        json={"fields": fields, "typecast": True},
     )
 
     if response.status_code != 200:
@@ -212,7 +212,7 @@ def create_records_batch(records_fields):
         response = requests.post(
             _table_url(),
             headers=_headers(),
-            json={"records": records},
+            json={"records": records, "typecast": True},
         )
 
         if response.status_code != 200:
